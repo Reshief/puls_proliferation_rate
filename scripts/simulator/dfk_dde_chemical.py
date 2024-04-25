@@ -410,6 +410,9 @@ if __name__ == "__main__":
 
     # Get the parameters
 
+    import pathlib
+
+
     # The coefficient to scale the growth term b(1-\rho)^c*\rho
     b = args.growth_constant
 
@@ -446,6 +449,13 @@ if __name__ == "__main__":
 
     # The prefix to prepend to all output paths
     output_prefix = args.output_prefix
+
+    # Ensure the output path exists
+    
+    output_test = pathlib.Path(output_prefix+"test.txt")
+    parent_dir = output_test.parents[0]
+    parent_dir.mkdir(exist_ok=True,parents=True)
+
 
     # The prefix to prepend to all output paths
     input_path = args.input_config
