@@ -106,7 +106,7 @@ def dfk_dde_model(
     # Get delayed state
     delayed = Y(t - Delta_t_s)
     rho_g_d = delayed[:per_system_dim]
-    rho_s_d = delayed[per_system_dim:]
+    rho_s_d = delayed[per_system_dim:2*per_system_dim]
 
     # Get gradient and laplace for differential calculation
     gradient_g = get_nabla_reflecting(r_vals, rho_g)
@@ -154,7 +154,7 @@ def dfk_dde_model(
     # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
     # FIXME: maybe there is a term that needs to be plugged instead of 0.0 (gradient/r \to ? for r\to 0)
     diff_t_g[0] = (
-        (D) * (laplace_g[0] + 0.0)
+        (D[0]) * (laplace_g[0] + 0.0)
         # Deal with D being non-constant
         + (gradient_D[0]) * (gradient_g[0])
         # The g-state cells entering the s-phase
