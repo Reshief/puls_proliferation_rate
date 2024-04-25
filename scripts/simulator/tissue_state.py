@@ -1,6 +1,7 @@
 import numpy as np
 
 
+#TODO: Implement tissue state reading including the chemical 
 def write_tissue_state(path: str, radial_positions, history_density, history_time):
     num_positions = len(radial_positions)
     num_times = len(history_time)
