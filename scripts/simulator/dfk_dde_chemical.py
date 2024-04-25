@@ -659,6 +659,15 @@ if __name__ == "__main__":
     ratio_density_max = 1.1 * rho_0
 
     per_system_dim = len(r_vals)
+    
+    def progressBar(current_value, max_value, suffix=''):
+        bar_length = 50
+        filled_up_Length = int(round(bar_length* current_value / float(max_value)))
+        percentage = round(100.0 * current_value/float(max_value),1)
+        bar = '=' * filled_up_Length + '-' * (bar_length - filled_up_Length)
+        sys.stdout.write('[%s] %s%s ...%s\r' %(bar, percentage, '%', suffix))
+        sys.stdout.flush()
+
 
     with open(output_prefix + "full_trajectory.txt", "w") as trajectory_out:
         n = len(r_vals)
@@ -694,6 +703,9 @@ if __name__ == "__main__":
         write_entry(trajectory_out, -1, r_vals, r_vals, r_vals)
         trajectory_out.flush()
 
+        first_time = last_time
+        progressBar(0.,final_sim_time-first_time)
+
         while last_time + 1.0001*dt < final_sim_time:
             # Calculate the next report step end time and required simulation time
             next_end_time = min(final_sim_time, last_time + report_step)
@@ -727,6 +739,8 @@ if __name__ == "__main__":
                     param_apoptosis_decay_rate,
                 ),
             )
+            
+            progressBar(last_time - first_time,final_sim_time-first_time, suffix="({:.2f}/{:.2f})".format(last_time, final_sim_time))
 
             last_time = next_end_time
 
@@ -789,12 +803,12 @@ if __name__ == "__main__":
                 report_axs[1].set_title("Chemical distribution")
                 report_axs[1].plot(r_vals, rho_chem, label=r"$\rho_{chem}$", c="k")
                 #report_axs[1].set_ylim((1e-4, 1.1))
-                report_axs[1].set_xlim((1e-4, ratio_density_max))
+                #report_axs[1].set_xlim((1e-4, ratio_density_max))
 
                 report_fig.tight_layout()
                 report_fig.savefig(
                     output_prefix
-                    + "density_profile_i{0:05d}_t{0:.3f}.pdf".format(report_iteration, last_time),
+                    + "density_profile_i{0:05d}_t{1:.3f}.pdf".format(report_iteration+1, last_time),
                     bbox_inches="tight",
                 )
             report_iteration += 1
