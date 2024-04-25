@@ -32,3 +32,6 @@ To run the simulator, on a command line just invoke, e.g.:
 Where `<further parameters>`  denotes the command line settings you desire for your simulation run. 
 Each script in this project will divulge the available options as well as additional information upon using the option `-h` or `--help` if you need help. 
 Additionally, the tools will inform you about missing parameters on the command line. Please be aware that you will not see the error output if you double click the python script on windows. You have to run it through the command line.
+
+For example, a recent run configuration was:
+```python ./scripts/simulator/dfk_dde_chemical.py -o ./output/test_1/ -g -t 40 -rs 1 -D_chem 2 -b_chem 4 -D_c 4 -D_0 0.2 -dt 0.001```
