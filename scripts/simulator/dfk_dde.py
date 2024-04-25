@@ -43,10 +43,10 @@ def get_nabla_reflecting(r, f):
     dr = r[1] - r[0]
 
     # get stencil for discret nabla
-    r_m1 = f[0:-2]
-    r_p1 = f[2:]
+    r_left = f[0:-2]
+    r_right = f[2:]
 
-    res[1:-1] = (r_p1 - r_m1) / (2 * dr)
+    res[1:-1] = (r_right - r_left) / (2 * dr)
 
     res[0] = 0  # we assume reflecting boundary conditions at zero
     # res[-1] = (-f[-2]) / (2 * dr)
@@ -68,11 +68,11 @@ def get_laplace(r, f):
     res[0] = (f[1] - f[0]) / (dr2)
 
     # get stencil elements for discrete laplace
-    r_m1 = f[0:-2]
-    r_c = f[1:-1]
-    r_p1 = f[2:]
+    r_left = f[0:-2]
+    r_center = f[1:-1]
+    r_right = f[2:]
 
-    res[1:-1] = (r_p1 - 2 * r_c + r_m1) / (dr2)
+    res[1:-1] = (r_right - 2 * r_center + r_left) / (dr2)
 
     res[-1] = 0
 
