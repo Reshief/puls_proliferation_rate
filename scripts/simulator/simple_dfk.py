@@ -120,10 +120,10 @@ class Simple_DFK_Sim:
         dr = r[1] - r[0]
 
         # get stencil for discret nabla
-        r_m1 = f[0:-2]
-        r_p1 = f[2:]
+        r_left = f[0:-2]
+        r_right = f[2:]
 
-        res[1:-1] = (r_p1 - r_m1) / (2 * dr)
+        res[1:-1] = (r_right - r_left) / (2 * dr)
 
         res[0] = 0  # we assume reflecting boundary conditions at zero
         # res[-1] = (-f[-2]) / (2 * dr)
@@ -134,7 +134,7 @@ class Simple_DFK_Sim:
     def get_laplace(self, r, f):
         # Calculate the second derivative incorporating the vanishing gradient at zero and
         # the forced zero at the outer edge
-        res = f * 0.0
+        res = np.zeros_like(f)
         dr = r[1] - r[0]
         dr2 = dr * dr
 
@@ -142,11 +142,11 @@ class Simple_DFK_Sim:
         res[0] = (f[1] - f[0]) / (dr2)
 
         # get stencil elements for discrete laplace
-        r_m1 = f[0:-2]
-        r_c = f[1:-1]
-        r_p1 = f[2:]
+        r_left = f[0:-2]
+        r_center = f[1:-1]
+        r_right = f[2:]
 
-        res[1:-1] = (r_p1 - 2 * r_c + r_m1) / (dr2)
+        res[1:-1] = (r_right - 2 * r_center + r_left) / (dr2)
 
         res[-1] = 0
 
