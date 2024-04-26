@@ -85,7 +85,8 @@ def dfk_dde_model(
     Y,
     t,
     Delta_t_s,
-    D,
+    D_base,
+    D_slope,
     b,
     rho_0,
     c,
@@ -105,7 +106,7 @@ def dfk_dde_model(
     # Get delayed state
     delayed = Y(t - Delta_t_s)
     rho_g_d = delayed[:per_system_dim]
-    rho_s_d = delayed[per_system_dim:]
+    rho_s_d = delayed[per_system_dim:2*per_system_dim]
 
     # Get gradient and laplace for differential calculation
     gradient_g = get_nabla_reflecting(r_vals, rho_g)
@@ -135,9 +136,15 @@ def dfk_dde_model(
     diff_t_chem = np.zeros_like(rho_chem)
 
     # calculate d_t for all but the r=0 position
-    # TODO: Deal with chemical-dependent diffusion
+
+    # Calculate spatially dependent diffusion
+    D = D_slope * rho_chem + D_base
+    gradient_D = get_nabla_reflecting(r_vals, D)
+
     diff_t_g[1:] = (
-        (D) * (laplace_g[1:] + gradient_g[1:] / r_vals[1:])
+        (D[1:]) * (laplace_g[1:] + gradient_g[1:] / r_vals[1:])
+        # Deal with D being non-constant
+        + (gradient_D[1:]) * (gradient_g[1:])
         # The g-state cells entering the s-phase
         - enter_division[1:]
         # The previous s-phase cells now proliferating
@@ -147,7 +154,9 @@ def dfk_dde_model(
     # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
     # FIXME: maybe there is a term that needs to be plugged instead of 0.0 (gradient/r \to ? for r\to 0)
     diff_t_g[0] = (
-        (D) * (laplace_g[0] + 0.0)
+        (D[0]) * (laplace_g[0] + 0.0)
+        # Deal with D being non-constant
+        + (gradient_D[0]) * (gradient_g[0])
         # The g-state cells entering the s-phase
         - enter_division[0]
         # The previous s-phase cells now proliferating
@@ -251,11 +260,18 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-D",
-        "--diff_constant",
+        "-D_0",
+        "--diff_constant_base",
         default=1,
         type=float,
-        help="The effective diffusion constant scale factor relative to chemical concentration with which the tissue spreads.",
+        help="The effective diffusion constant scale base value with which the tissue spreads.",
+    )
+    parser.add_argument(
+        "-D_c",
+        "--diff_constant_slope",
+        default=1,
+        type=float,
+        help="The slope of the effective diffusion constant relative to chemical concentration with which the tissue spreads.",
     )
 
     parser.add_argument(
@@ -394,6 +410,9 @@ if __name__ == "__main__":
 
     # Get the parameters
 
+    import pathlib
+
+
     # The coefficient to scale the growth term b(1-\rho)^c*\rho
     b = args.growth_constant
 
@@ -401,7 +420,8 @@ if __name__ == "__main__":
     c = args.curvature_exponent
 
     # The constant diffusion coefficient in radial direction
-    D = args.diff_constant
+    D_base = args.diff_constant_base
+    D_slope = args.diff_constant_slope
 
     # The initial cutoff radius
     R = args.radius
@@ -429,6 +449,13 @@ if __name__ == "__main__":
 
     # The prefix to prepend to all output paths
     output_prefix = args.output_prefix
+
+    # Ensure the output path exists
+    
+    output_test = pathlib.Path(output_prefix+"test.txt")
+    parent_dir = output_test.parents[0]
+    parent_dir.mkdir(exist_ok=True,parents=True)
+
 
     # The prefix to prepend to all output paths
     input_path = args.input_config
@@ -534,7 +561,8 @@ if __name__ == "__main__":
     final_sim_time = last_time+total_sim_time
 
     with open(output_prefix + "config.txt", "w") as config_out:
-        config_out.write("{0}\t=\t{1:.5e}\n".format("D", D))
+        config_out.write("{0}\t=\t{1:.5e}\n".format("D_base (D_0)", D_base))
+        config_out.write("{0}\t=\t{1:.5e}\n".format("D_slope (D_c)", D_slope))
         config_out.write("{0}\t=\t{1:.5e}\n".format("b", b))
         config_out.write("{0}\t=\t{1:.5e}\n".format("Delta_t_s", Delta_t_s))
         config_out.write("{0}\t=\t{1:.5e}\n".format("Curvature (c)", c))
@@ -630,6 +658,15 @@ if __name__ == "__main__":
     ratio_density_max = 1.1 * rho_0
 
     per_system_dim = len(r_vals)
+    
+    def progressBar(current_value, max_value, suffix=''):
+        bar_length = 50
+        filled_up_Length = int(round(bar_length* current_value / float(max_value)))
+        percentage = round(100.0 * current_value/float(max_value),1)
+        bar = '=' * filled_up_Length + '-' * (bar_length - filled_up_Length)
+        sys.stdout.write('[%s] %s%s ...%s\r' %(bar, percentage, '%', suffix))
+        sys.stdout.flush()
+
 
     with open(output_prefix + "full_trajectory.txt", "w") as trajectory_out:
         n = len(r_vals)
@@ -651,18 +688,22 @@ if __name__ == "__main__":
         )
         trajectory_out.write("# n={0}\n".format(n))
 
-        # TODO: Consider the chemical density
-        def write_entry(out, time, rho_g, rho_s):
+        def write_entry(out, time, rho_g, rho_s, rho_chem):
             out.write("{0:1.8e}".format(time))
             n = len(rho_g)
             for i in range(n):
                 out.write("\t{0:.8e}".format(rho_g[i]))
             for i in range(n):
                 out.write("\t{0:.8e}".format(rho_s[i]))
+            for i in range(n):
+                out.write("\t{0:.8e}".format(rho_chem[i]))
             out.write("\n")
 
-        write_entry(trajectory_out, -1, r_vals, r_vals)
+        write_entry(trajectory_out, -1, r_vals, r_vals, r_vals)
         trajectory_out.flush()
+
+        first_time = last_time
+        progressBar(0.,final_sim_time-first_time)
 
         while last_time + 1.0001*dt < final_sim_time:
             # Calculate the next report step end time and required simulation time
@@ -684,7 +725,8 @@ if __name__ == "__main__":
                 t_data,
                 fargs=(
                     Delta_t_s,
-                    D,
+                    D_base,
+                    D_slope,
                     b,
                     rho_0,
                     c,
@@ -696,6 +738,8 @@ if __name__ == "__main__":
                     param_apoptosis_decay_rate,
                 ),
             )
+            
+            progressBar(last_time - first_time,final_sim_time-first_time, suffix="({:.2f}/{:.2f})".format(last_time, final_sim_time))
 
             last_time = next_end_time
 
@@ -709,40 +753,18 @@ if __name__ == "__main__":
                     total_rho_history, res_data, axis=0)
 
                 # Accumulate statistics for proliferation ratio
-                # TODO: consider the chemical density
                 for step in range(len(res_data)):
                     rho_g = res_data[step][:per_system_dim]
-                    rho_s = res_data[step][per_system_dim:]
+                    rho_s = res_data[step][per_system_dim:2*per_system_dim]
+                    rho_chem = res_data[step][2*per_system_dim:]
 
-                    # TODO: Consider the chemical density
-                    write_entry(trajectory_out, t_data[step], rho_g, rho_s)
+                    write_entry(trajectory_out, t_data[step], rho_g, rho_s, rho_chem)
                     rho = rho_g + rho_s
 
                     filter_mask = rho > 1e-3
                     ratios = rho_s[filter_mask] / rho[filter_mask]
                     base_rho = rho[filter_mask]
 
-                    for p in range(len(base_rho)):
-                        if base_rho[p] >= rho_0:
-                            continue
-                        elif base_rho[p] <= 0.0:
-                            continue
-                        else:
-                            entry_index = min(
-                                int(np.floor(base_rho[p] / rho_delta)),
-                                upper_rho_spread_index - 1,
-                            )
-                            prev_count = rho_statistics_hits[entry_index]
-                            rho_statistics_hits[entry_index] += 1
-                            rho_statistics_mean[entry_index] = (
-                                rho_statistics_mean[entry_index] * prev_count
-                                + ratios[p]
-                            ) / float(rho_statistics_hits[entry_index])
-                            rho_statistics_mean_sq[entry_index] = (
-                                rho_statistics_mean_sq[entry_index] *
-                                prev_count
-                                + ratios[p] ** 2
-                            ) / float(rho_statistics_hits[entry_index])
             # Filter the history and truncate entries to free up memory
             history_time_filter = total_t_history >= last_time - 2 * Delta_t_s
 
@@ -757,54 +779,40 @@ if __name__ == "__main__":
                 total_t_history, total_rho_history
             )
 
-            reference_curve_x = np.linspace(0, rho_0, num=200)
-            reference_curve_y = b * np.power(
-                np.clip(rho_0 - reference_curve_x, a_min=0.0, a_max=rho_0), c
-            )
-            reference_curve_y = reference_curve_y / reference_curve_y[0]
-
             c_data = res_data[-1]
 
-            # TODO: Consider the chemical density
             rho_g = c_data[:per_system_dim]
-            rho_s = c_data[per_system_dim:]
+            rho_s = c_data[per_system_dim:2*per_system_dim]
+            rho_chem = c_data[2*per_system_dim:]
 
             rho = rho_g + rho_s
 
             if visual_enabled:
-                # TODO: Consider the chemical density
                 report_axs[0].clear()
                 report_axs[0].set_title(
                     "Density distribution (t={0})".format(last_time)
                 )
-                report_axs[0].plot(r_vals, rho_s, label=r"$\rho_s$")
-                report_axs[0].plot(r_vals, rho_g, label=r"$\rho_g$")
-                report_axs[0].plot(r_vals, rho, label=r"$\rho$")
+                report_axs[0].plot(r_vals, rho_s, label=r"$\rho_s$", c="g")
+                report_axs[0].plot(r_vals, rho_g, label=r"$\rho_g$", c="r")
+                report_axs[0].plot(r_vals, rho, label=r"$\rho$", c="b")
                 report_axs[0].set_ylim((0, rho_0 * 1.1))
                 report_axs[0].legend()
 
                 report_axs[1].clear()
-                report_axs[1].set_title("Proliferation ratio")
-                report_axs[1].errorbar(
-                    rho_spread,
-                    rho_statistics_mean,
-                    yerr=np.sqrt(rho_statistics_mean_sq -
-                                 rho_statistics_mean ** 2),
-                )
-                report_axs[1].plot(reference_curve_x, reference_curve_y)
-                report_axs[1].set_ylim((1e-4, 1.1))
-                report_axs[1].set_xlim((1e-4, ratio_density_max))
+                report_axs[1].set_title("Chemical distribution")
+                report_axs[1].plot(r_vals, rho_chem, label=r"$\rho_{chem}$", c="k")
+                #report_axs[1].set_ylim((1e-4, 1.1))
+                #report_axs[1].set_xlim((1e-4, ratio_density_max))
 
                 report_fig.tight_layout()
                 report_fig.savefig(
                     output_prefix
-                    + "density_profile_i{0:05d}_t{0:.3f}.pdf".format(report_iteration, last_time),
+                    + "density_profile_i{0:05d}_t{1:.3f}.pdf".format(report_iteration+1, last_time),
                     bbox_inches="tight",
                 )
             report_iteration += 1
 
     print("Writing final state")
-    # TODO: Consider the chemical density
     write_tissue_state_chemical(output_prefix+"final_state.txt",
                        r_vals, total_rho_history, total_t_history)
     print("Done")
