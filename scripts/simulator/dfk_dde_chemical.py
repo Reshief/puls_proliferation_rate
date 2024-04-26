@@ -10,7 +10,7 @@ from os.path import dirname, abspath
 import scipy.integrate as sp_int
 import scipy.interpolate as sp_interpol
 from ddesolver import solve_dde
-from tissue_state import read_tissue_state, write_tissue_state
+from tissue_state import read_tissue_state_chemical, write_tissue_state_chemical
 
 
 sys.path.append(abspath(dirname(__file__)))
@@ -504,7 +504,7 @@ if __name__ == "__main__":
         return np.concatenate((rho_g, rho_s, rho_chem))
 
     if input_path is not None:
-        r_vals, total_rho_history, total_t_history = read_tissue_state(
+        r_vals, total_rho_history, total_t_history = read_tissue_state_chemical(
             input_path)
 
         total_radius = np.max(r_vals)
@@ -805,7 +805,7 @@ if __name__ == "__main__":
 
     print("Writing final state")
     # TODO: Consider the chemical density
-    write_tissue_state(output_prefix+"final_state.txt",
+    write_tissue_state_chemical(output_prefix+"final_state.txt",
                        r_vals, total_rho_history, total_t_history)
     print("Done")
 
