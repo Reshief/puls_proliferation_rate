@@ -104,7 +104,7 @@ if __name__ == "__main__":
     report_axs[0].set_title("Cell density")
     
     divider = make_axes_locatable(report_axs[0])
-    cax = divider.append_axes('right', size='5%', pad=0.15)
+    cax = divider.append_axes('right', size='5%', pad=0.05)
     report_fig.colorbar(im1, cax=cax, orientation='vertical')
 
     im2 = report_axs[1].imshow(rho_chem[:,position_filter], origin='lower', interpolation='bilinear',
@@ -116,4 +116,5 @@ if __name__ == "__main__":
 
     report_fig.colorbar(im2, cax=cax, orientation='vertical')
 
+    report_fig.tight_layout()
     report_fig.savefig(output_prefix+"_full_trajectory_evo.pdf", dpi=200)
