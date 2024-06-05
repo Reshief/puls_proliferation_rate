@@ -6,3 +6,9 @@ python ./scripts/simulator/dfk_dde_chemical.py -c 0.5 -b 0.25 -b_chem 4 -D_0 2. 
 python ./scripts/simulator/dfk_dde_chemical.py -c 0.5 -b 0.25 -b_chem 4 -D_0 2. -D_c 2.0 -ts 0 -r 200 -D_chem 4.3 -r_i 5 -d_i 0.5 -dr 0.1 -t 25. -dt 0.001 -o ./output/test_4/ -g -rs 0.1
 python ./scripts/simulator/dfk_dde_chemical.py -c 1.0 -b 0.25 -b_chem 4 -D_0 1. -D_c 1.0 -ts 0 -r 200 -D_chem 4.3 -r_i 5 -d_i 0.5 -dr 0.1 -t 25. -dt 0.001 -o ./output/test_5/ -g -rs 0.1 -- smooth
 python ./scripts/simulator/dfk_dde_chemical.py -c 1.0 -b 0.25 -b_chem 4 -D_0 1. -D_c 1.0 -ts 0.25 -r 200 -D_chem 4.3 -r_i 5 -d_i 0.5 -dr 0.1 -t 25. -dt 0.001 -o ./output/test_6/ -g -rs 0.1 --smooth
+
+
+python ./scripts/analysis/plot_chemical_density.py -t 1.8 -rs 0.01 -r 20 -i ./output/test_1/ -o ./output/test_1/
+python ./scripts/analysis/plot_chemical_density.py -t 1.8 -rs 0.01 -r 20 -i ./output/test_2/ -o ./output/test_2/
+python ./scripts/analysis/plot_chemical_density.py -t 1.8 -rs 0.01 -r 20 -i ./output/test_5/ -o ./output/test_5/
+python ./scripts/analysis/plot_chemical_density.py -t 1.8 -rs 0.01 -r 20 -i ./output/test_6/ -o ./output/test_6/
