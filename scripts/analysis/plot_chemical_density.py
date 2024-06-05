@@ -3,8 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 import argparse
 import numpy as np
+from matplotlib import colormaps
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from scripts.simulator.tissue_state import read_tissue_state_chemical
+from tissue_state import read_tissue_state_chemical
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -22,9 +24,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t",
         "--total_time",
-        default=4,
+        default=100,
         type=float,
         help="Maximum time to plot.",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--r_max",
+        default=10,
+        type=float,
+        help="Maximum radius to plot.",
     )
 
     parser.add_argument(
@@ -50,7 +60,8 @@ if __name__ == "__main__":
     output_prefix = args.output_prefix
 
     t_max = args.total_time
-    rs = args.reporting_step
+    r_max = args.r_max
+    rs = args.report_step
 
     r_vals, total_rho_history, total_t_history = read_tissue_state_chemical(
         input_dir + "full_trajectory.txt")
@@ -77,7 +88,32 @@ if __name__ == "__main__":
 
     positions = len(r_vals)
 
+    position_filter = r_vals <= r_max
+
+    rho_g = full_rho_plot[:, :positions]
+    rho_d = full_rho_plot[:, positions:(2*positions)]
+    rho_chem = full_rho_plot[:, (2*positions):(3*positions)]
+
+    rho_cell = rho_g+rho_d
+
+    plt.ion()
+    report_fig, report_axs = plt.subplots(1, 2)
+
+    im1 = report_axs[0].imshow(rho_cell[:,position_filter], origin='lower', interpolation='bilinear',
+                         aspect='auto', cmap=colormaps["inferno"])
+    report_axs[0].set_title("Cell density")
     
+    divider = make_axes_locatable(report_axs[0])
+    cax = divider.append_axes('right', size='5%', pad=0.05)
+    report_fig.colorbar(im1, cax=cax, orientation='vertical')
 
+    im2 = report_axs[1].imshow(rho_chem[:,position_filter], origin='lower', interpolation='bilinear',
+                         aspect='auto', cmap=colormaps["inferno"])
+    report_axs[1].set_title("Chem density")
+    
+    divider = make_axes_locatable(report_axs[1])
+    cax = divider.append_axes('right', size='5%', pad=0.05)
+    
+    report_fig.colorbar(im1, cax=cax, orientation='vertical')
 
-    plt.imshow(Z, origin='lower', interpolation='bilinear')
+    report_fig.savefig(output_prefix+"_full_trajectory_evo.pdf", dpi=200)
