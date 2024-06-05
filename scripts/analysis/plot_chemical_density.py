@@ -113,7 +113,7 @@ if __name__ == "__main__":
     
     divider = make_axes_locatable(report_axs[1])
     cax = divider.append_axes('right', size='5%', pad=0.05)
-    
-    report_fig.colorbar(im1, cax=cax, orientation='vertical')
+
+    report_fig.colorbar(im2, cax=cax, orientation='vertical')
 
     report_fig.savefig(output_prefix+"_full_trajectory_evo.pdf", dpi=200)
