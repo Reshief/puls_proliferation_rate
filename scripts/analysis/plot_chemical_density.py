@@ -104,11 +104,11 @@ if __name__ == "__main__":
     report_axs[0].set_title("Cell density")
     
     divider = make_axes_locatable(report_axs[0])
-    cax = divider.append_axes('right', size='5%', pad=0.05)
+    cax = divider.append_axes('right', size='5%', pad=0.15)
     report_fig.colorbar(im1, cax=cax, orientation='vertical')
 
     im2 = report_axs[1].imshow(rho_chem[:,position_filter], origin='lower', interpolation='bilinear',
-                         aspect='auto', cmap=colormaps["inferno"])
+                         aspect='auto', cmap=colormaps["viridis"])
     report_axs[1].set_title("Chem density")
     
     divider = make_axes_locatable(report_axs[1])
