@@ -18,3 +18,7 @@ python ./scripts/analysis/plot_chemical_density.py -t 9.5 -rs 0.01 -r 20 -i ./ou
 
 python ./scripts/simulator/dfk_dde_chemical.py -c 1.0 -b 0.25 -b_chem 4 -D_0 1. -D_c 1.0 -ts 0.0 -r 200 -D_chem 4.3 -r_i 5 -d_i 0.5 -dr 0.2 -t 25. -dt 0.001 -o ./output/test_8/ -g -rs 0.1 --smooth
 python ./scripts/analysis/plot_chemical_density.py -t 9.5 -rs 0.01 -r 20 -i ./output/test_8/ -o ./output/test_8/
+
+
+python ./scripts/simulator/dfk_dde_chemical.py -c 1.0 -b 0.5 -b_chem 3 -D_0 1. -D_c 1.0 -ts 0.0 -r 200 -D_chem 4.3 -r_i 5 -d_i 0.5 -dr 0.2 -t 25. -dt 0.001 -o ./output/test_9/ -g -rs 0.1 --smooth
+python ./scripts/analysis/plot_chemical_density.py -t 9.5 -rs 0.01 -r 20 -i ./output/test_9/ -o ./output/test_9/
