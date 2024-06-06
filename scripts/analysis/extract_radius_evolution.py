@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
         integ_dens = 2 * math.pi * r_vals * rho[i_t]
 
-        full_volume = sp_int.simpson(integ_dens, r_vals)
+        full_volume = sp_int.simpson(integ_dens, x=r_vals)
 
         r_vol = np.sqrt(full_volume/math.pi)
         integral_radius[i_t] = r_vol
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
         integ_dens = 2 * math.pi * r_vals * rho_chem[i_t]
 
-        full_volume = sp_int.simpson(integ_dens, r_vals)
+        full_volume = sp_int.simpson(integ_dens, x=r_vals)
 
         r_vol = np.sqrt(full_volume/math.pi)
         integral_radius_chem[i_t] = r_vol
@@ -134,7 +134,7 @@ if __name__ == "__main__":
                 times[i_t], classic_radius[i_t], integral_radius[i_t], classic_radius_chem[i_t], integral_radius_chem[i_t]))
 
     plt.clf()
-    plt.title("Proliferation ratio")
+    plt.title("Radial evolution")
     plt.plot(times, classic_radius, label="half-max radius")
     plt.plot(times, integral_radius, label="circle-volume radius")
     plt.legend()
@@ -144,9 +144,19 @@ if __name__ == "__main__":
         bbox_inches="tight",
     )
     plt.clf()
-    plt.title("Proliferation ratio chemical")
+    plt.title("Radial evolution")
+    plt.plot(times, classic_radius, label="half-max radius")
+    plt.plot(times, integral_radius, label="circle-volume radius")
+    plt.plot(times, classic_radius_chem, label="half-max radius (chemical)")
+    plt.legend()
+    plt.savefig(
+        output_prefix +
+        "radius_evolution_combined.pdf",
+        bbox_inches="tight",
+    )
+    plt.clf()
+    plt.title("Radial evolution chemical")
     plt.plot(times, classic_radius_chem, label="half-max radius")
-    plt.plot(times, integral_radius_chem, label="circle-volume radius")
     plt.legend()
     plt.savefig(
         output_prefix +
