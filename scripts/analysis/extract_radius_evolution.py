@@ -71,28 +71,31 @@ if __name__ == "__main__":
     full_input = np.loadtxt(input_path, ndmin=2)
     radii = full_input[0]
     radii = radii[1:]
-    n = int(len(radii)/2)
+    n = int(len(radii)/3)
 
     r_vals = radii[:n]
 
-    times = full_input[:, 0]
+    times = full_input[1:, 0]
     time_filter = (times > begin_time) & (times <= end_time)
 
-    filtered_data = full_input[:, 1:]
+    filtered_data = full_input[1:, 1:]
     filtered_data = filtered_data[time_filter]
 
     times = times[time_filter]
-    rho_g = filtered_data[:, 1:(n+1)]
-    rho_s = filtered_data[:, (n+1):]
+    rho_g = filtered_data[:, :(n)]
+    rho_s = filtered_data[:, (n):(2*n)]
+    rho_chem = filtered_data[:, (2*n):]
     rho = rho_g+rho_s
     per_system_dim = len(r_vals)
 
     classic_radius = np.zeros_like(times)
     integral_radius = np.zeros_like(times)
+    classic_radius_chem = np.zeros_like(times)
+    integral_radius_chem = np.zeros_like(times)
 
     for i_t in range(len(times)):
-        t_max = rho[i_t][0]
-        half_max = t_max / 2.0
+        rho_max = np.max(rho[i_t])
+        half_max = rho_max / 2.0
 
         filter = (rho[i_t] >= half_max)
         rmax = np.max(r_vals[filter])
@@ -101,18 +104,34 @@ if __name__ == "__main__":
 
         integ_dens = 2 * math.pi * r_vals * rho[i_t]
 
-        full_volume = sp_int.simps(integ_dens, r_vals)
+        full_volume = sp_int.simpson(integ_dens, r_vals)
 
         r_vol = np.sqrt(full_volume/math.pi)
         integral_radius[i_t] = r_vol
 
+        
+        rho_max = np.max(rho_chem[i_t])
+        half_max = rho_max / 2.0
+
+        filter = (rho_chem[i_t] >= half_max)
+        rmax = np.max(r_vals[filter])
+
+        classic_radius_chem[i_t] = rmax
+
+        integ_dens = 2 * math.pi * r_vals * rho_chem[i_t]
+
+        full_volume = sp_int.simpson(integ_dens, r_vals)
+
+        r_vol = np.sqrt(full_volume/math.pi)
+        integral_radius_chem[i_t] = r_vol
+
     with open(output_prefix + "radial_results.dat", "w") as radius_out:
-        radius_out.write("{0}\t{1}\t{2}\n".format(
-            "#t[a.u.]", "#r_half_center", "#r_volume"))
+        radius_out.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(
+            "#t[a.u.]", "#r_half_max", "#r_volume", "#r_half_max (chem)", "#r_volume (chem)"))
 
         for i_t in range(len(times)):
-            radius_out.write("{0:.8e}\t{1:.8e}\t{2:.8e}\n".format(
-                times[i_t], classic_radius[i_t], integral_radius[i_t]))
+            radius_out.write("{0:.8e}\t{1:.8e}\t{2:.8e}\t{3:.8e}\t{4:.8e}\n".format(
+                times[i_t], classic_radius[i_t], integral_radius[i_t], classic_radius_chem[i_t], integral_radius_chem[i_t]))
 
     plt.clf()
     plt.title("Proliferation ratio")
@@ -122,6 +141,16 @@ if __name__ == "__main__":
     plt.savefig(
         output_prefix +
         "radius_evolution.pdf",
+        bbox_inches="tight",
+    )
+    plt.clf()
+    plt.title("Proliferation ratio chemical")
+    plt.plot(times, classic_radius_chem, label="half-max radius")
+    plt.plot(times, integral_radius_chem, label="circle-volume radius")
+    plt.legend()
+    plt.savefig(
+        output_prefix +
+        "radius_evolution_chem.pdf",
         bbox_inches="tight",
     )
 
