@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
-from audioop import reverse
 from calendar import c
 import math
-from os import times_result
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import argparse
@@ -11,11 +9,6 @@ import numpy as np
 import sys
 from os.path import dirname, abspath
 import scipy.integrate as sp_int
-import scipy.interpolate as sp_interpol
-from ddesolver import solve_dde
-from theory.meanfield import rate
-from theory.prolif_theory_fit import fit_meanfield_model, Meanfield_Params
-from scipy.optimize import curve_fit
 
 
 sys.path.append(abspath(dirname(__file__)))
@@ -44,20 +37,19 @@ if __name__ == "__main__":
         type=float,
         help="Time at which the analysis should be started.",
     )
+    parser.add_argument(
+        "-e",
+        "--end_time",
+        default=10.0,
+        type=float,
+        help="Time at which the analysis should be stopped.",
+    )
 
     parser.add_argument(
         "-o",
         "--output_prefix",
         default="data/",
         help="Output prefix (e.g. path) for the resulting files.",
-    )
-
-    parser.add_argument(
-        "-g",
-        "--graphical_ui",
-        default=False,
-        action="store_true",
-        help="Flag to enable visual output of intermediate results.",
     )
 
     args = parser.parse_args()
@@ -67,17 +59,14 @@ if __name__ == "__main__":
     # Input trajectory path
     input_path = args.input_trajectory
 
-    # Time at which the analysis should be started
+    # Time at which the analysis should be started and stopped
     begin_time = args.begin_time
+    end_time = args.end_time
 
     # The prefix to prepend to all output paths
     output_prefix = args.output_prefix
 
-    # Flag to enable graphical output
-    visual_enabled = args.graphical_ui
-
-    if visual_enabled:
-        plt.ion()
+    plt.ion()
 
     full_input = np.loadtxt(input_path, ndmin=2)
     radii = full_input[0]
@@ -87,14 +76,14 @@ if __name__ == "__main__":
     r_vals = radii[:n]
 
     times = full_input[:, 0]
-    time_filter = times > begin_time
+    time_filter = (times > begin_time) & (times <= end_time)
 
     filtered_data = full_input[:, 1:]
     filtered_data = filtered_data[time_filter]
 
     times = times[time_filter]
-    rho_g = filtered_data[:, :n]
-    rho_s = filtered_data[:, n:]
+    rho_g = filtered_data[:, 1:(n+1)]
+    rho_s = filtered_data[:, (n+1):]
     rho = rho_g+rho_s
     per_system_dim = len(r_vals)
 
@@ -125,16 +114,15 @@ if __name__ == "__main__":
             radius_out.write("{0:.8e}\t{1:.8e}\t{2:.8e}\n".format(
                 times[i_t], classic_radius[i_t], integral_radius[i_t]))
 
-    if visual_enabled:
-        plt.clf()
-        plt.title("Proliferation ratio")
-        plt.plot(times, classic_radius, label="half-max radius")
-        plt.plot(times, integral_radius, label="circle-volume radius")
-        plt.legend()
-        plt.savefig(
-            output_prefix +
-            "radius_evolution.pdf",
-            bbox_inches="tight",
-        )
+    plt.clf()
+    plt.title("Proliferation ratio")
+    plt.plot(times, classic_radius, label="half-max radius")
+    plt.plot(times, integral_radius, label="circle-volume radius")
+    plt.legend()
+    plt.savefig(
+        output_prefix +
+        "radius_evolution.pdf",
+        bbox_inches="tight",
+    )
 
     sys.exit(0)
