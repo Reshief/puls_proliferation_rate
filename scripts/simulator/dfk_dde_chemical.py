@@ -660,7 +660,7 @@ if __name__ == "__main__":
         rho_g[r_vals <= lower_cutoff] = d_i
 
         r_filter = (r_vals > lower_cutoff) & (r_vals <= upper_cutoff)
-        rho_g[r_filter] = R_i * (1 - ((r_vals[r_filter]-lower_cutoff)/dist)
+        rho_g[r_filter] = d_i * (1 - ((r_vals[r_filter]-lower_cutoff)/dist)
                                  ** 2) * ((upper_cutoff-r_vals[r_filter])/dist)**2
 
         return np.concatenate((rho_g, rho_s, rho_chem))
