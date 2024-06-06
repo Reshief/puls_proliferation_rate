@@ -90,6 +90,7 @@ if __name__ == "__main__":
 
     position_filter = r_vals <= r_max
 
+    r_vals = r_vals[position_filter]
     rho_g = full_rho_plot[:, :positions]
     rho_d = full_rho_plot[:, positions:(2*positions)]
     rho_chem = full_rho_plot[:, (2*positions):(3*positions)]
@@ -99,18 +100,21 @@ if __name__ == "__main__":
     plt.ion()
     report_fig, report_axs = plt.subplots(1, 2)
 
-    im1 = report_axs[0].imshow(rho_cell[:,position_filter], origin='lower', interpolation='bilinear',
-                         aspect='auto', cmap=colormaps["inferno"])
+    im1 = report_axs[0].imshow(rho_cell[:, position_filter], origin='lower', interpolation='bilinear',
+                               aspect='auto', cmap=colormaps["inferno"], extent=[np.min(r_vals), np.max(r_vals), np.min(total_t_history), np.max(total_t_history)])
     report_axs[0].set_title("Cell density")
-    
+    report_axs[0].set_xlabel(r"$r$")
+    report_axs[0].set_ylabel(r"$t$")
+
     divider = make_axes_locatable(report_axs[0])
     cax = divider.append_axes('right', size='5%', pad=0.05)
     report_fig.colorbar(im1, cax=cax, orientation='vertical')
 
-    im2 = report_axs[1].imshow(rho_chem[:,position_filter], origin='lower', interpolation='bilinear',
-                         aspect='auto', cmap=colormaps["viridis"])
+    im2 = report_axs[1].imshow(rho_chem[:, position_filter], origin='lower', interpolation='bilinear',
+                               aspect='auto', cmap=colormaps["viridis"], extent=[np.min(r_vals), np.max(r_vals), np.min(total_t_history), np.max(total_t_history)])
     report_axs[1].set_title("Chem density")
-    
+    report_axs[1].set_xlabel(r"$r$")
+
     divider = make_axes_locatable(report_axs[1])
     cax = divider.append_axes('right', size='5%', pad=0.05)
 
