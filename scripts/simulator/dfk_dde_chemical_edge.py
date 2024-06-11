@@ -155,9 +155,9 @@ def dfk_dde_model(
     dr2 = dr**2
     # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
     diff_t_g[0] = (
-        #(D[0]) * (laplace_g[0] + 0.0)
+        # (D[0]) * (laplace_g[0] + 0.0)
         # FIXED: The laplace-term at r=0 has been fixed
-        (D[0]) * (4.* (rho_g[1]-rho_g[0])/dr2)
+        (D[0]) * (4. * (rho_g[1]-rho_g[0])/dr2)
         # Deal with D being non-constant
         + (gradient_D[0]) * (gradient_g[0])
         # The g-state cells entering the s-phase
@@ -166,7 +166,6 @@ def dfk_dde_model(
         + 2 * enter_division_d[0]
     )
 
-    
     # chalculate chemical diffusion at all but origin
     rho_cell_total = rho_g + rho_s
     nabla_full_cell = get_nabla_reflecting(r_vals, rho_cell_total)
@@ -174,9 +173,7 @@ def dfk_dde_model(
     # TODO: Make minimum gradient configurable
     spawn_filter = np.abs(nabla_full_cell) > 0.1
 
-
     # Determine the full gradient as a sort of measure for the pressure gradient
-
 
     # TODO: Add constant dissipation rate for chemical
     diff_t_chem[1:] = (
@@ -187,15 +184,16 @@ def dfk_dde_model(
     # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
     # FIXME: maybe there is a term that needs to be plugged instead of 0.0 (gradient/r \to ? for r\to 0)
     diff_t_chem[0] = (
-        #(D_chem) * (laplace_chem[0] + 0.0)
+        # (D_chem) * (laplace_chem[0] + 0.0)
         # FIXED: The laplace-term at r=0 has been fixed
-        (D_chem) * (4.* (rho_chem[1]-rho_chem[0])/dr2)
+        (D_chem) * (4. * (rho_chem[1]-rho_chem[0])/dr2)
         # Cells secreting the chemical
     )
 
     # Only spawn chemical where filter has determined
-    diff_t_chem[spawn_filter] += chem_rate *rho_cell_total[spawn_filter]
-
+    diff_t_chem[spawn_filter] += chem_rate * rho_cell_total[spawn_filter]
+    # Make chemical disappear over time
+    diff_t_chem -= 0.1 * rho_chem
 
     # Apply apoptosis if configured
     if apoptosis_start_time >= 0 and t > apoptosis_start_time:
@@ -283,7 +281,7 @@ def dfk_dde_model_1D(
     gradient_D = get_nabla_reflecting(r_vals, D)
 
     diff_t_g[1:] = (
-        (D[1:]) * (laplace_g[1:] )
+        (D[1:]) * (laplace_g[1:])
         # Deal with D being non-constant
         + (gradient_D[1:]) * (gradient_g[1:])
         # The g-state cells entering the s-phase
@@ -296,9 +294,9 @@ def dfk_dde_model_1D(
     dr2 = dr**2
     # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
     diff_t_g[0] = (
-        #(D[0]) * (laplace_g[0] + 0.0)
+        # (D[0]) * (laplace_g[0] + 0.0)
         # FIXED: The laplace-term at r=0 has been fixed
-        (D[0]) * (2.* (rho_g[1]-rho_g[0])/dr2)
+        (D[0]) * (2. * (rho_g[1]-rho_g[0])/dr2)
         # Deal with D being non-constant
         + (gradient_D[0]) * (gradient_g[0])
         # The g-state cells entering the s-phase
@@ -307,7 +305,6 @@ def dfk_dde_model_1D(
         + 2 * enter_division_d[0]
     )
 
-    
     # chalculate chemical diffusion at all but origin
     rho_cell_total = rho_g + rho_s
     diff_t_chem[1:] = (
@@ -319,13 +316,12 @@ def dfk_dde_model_1D(
     # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
     # FIXME: maybe there is a term that needs to be plugged instead of 0.0 (gradient/r \to ? for r\to 0)
     diff_t_chem[0] = (
-        #(D_chem) * (laplace_chem[0] + 0.0)
+        # (D_chem) * (laplace_chem[0] + 0.0)
         # FIXED: The laplace-term at r=0 has been fixed
-        (D_chem) * (2.* (rho_chem[1]-rho_chem[0])/dr2)
+        (D_chem) * (2. * (rho_chem[1]-rho_chem[0])/dr2)
         # Cells secreting the chemical
         + chem_rate * rho_cell_total[0]
     )
-
 
     # Apply apoptosis if configured
     if apoptosis_start_time >= 0 and t > apoptosis_start_time:
@@ -558,7 +554,6 @@ if __name__ == "__main__":
 
     import pathlib
 
-
     # The coefficient to scale the growth term b(1-\rho)^c*\rho
     b = args.growth_constant
 
@@ -597,11 +592,10 @@ if __name__ == "__main__":
     output_prefix = args.output_prefix
 
     # Ensure the output path exists
-    
+
     output_test = pathlib.Path(output_prefix+"test.txt")
     parent_dir = output_test.parents[0]
-    parent_dir.mkdir(exist_ok=True,parents=True)
-
+    parent_dir.mkdir(exist_ok=True, parents=True)
 
     # The prefix to prepend to all output paths
     input_path = args.input_config
@@ -706,7 +700,8 @@ if __name__ == "__main__":
 
     if dt > dr*dr/4.:
         dt = dr*dr/4.
-        print("Reduced the time step to {0:.3e} to increase stability".format(dt))
+        print(
+            "Reduced the time step to {0:.3e} to increase stability".format(dt))
 
     final_sim_time = last_time+total_sim_time
 
@@ -808,15 +803,15 @@ if __name__ == "__main__":
     ratio_density_max = 1.1 * rho_0
 
     per_system_dim = len(r_vals)
-    
+
     def progressBar(current_value, max_value, suffix=''):
         bar_length = 50
-        filled_up_Length = int(round(bar_length* current_value / float(max_value)))
-        percentage = round(100.0 * current_value/float(max_value),1)
+        filled_up_Length = int(
+            round(bar_length * current_value / float(max_value)))
+        percentage = round(100.0 * current_value/float(max_value), 1)
         bar = '=' * filled_up_Length + '-' * (bar_length - filled_up_Length)
-        sys.stdout.write('[%s] %s%s ...%s\r' %(bar, percentage, '%', suffix))
+        sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percentage, '%', suffix))
         sys.stdout.flush()
-
 
     with open(output_prefix + "full_trajectory.txt", "w") as trajectory_out:
         n = len(r_vals)
@@ -853,7 +848,7 @@ if __name__ == "__main__":
         trajectory_out.flush()
 
         first_time = last_time
-        progressBar(0.,final_sim_time-first_time)
+        progressBar(0., final_sim_time-first_time)
 
         while last_time + 1.0001*dt < final_sim_time:
             # Calculate the next report step end time and required simulation time
@@ -881,15 +876,16 @@ if __name__ == "__main__":
                     rho_0,
                     c,
                     r_vals,
-                    chem_rate, 
+                    chem_rate,
                     D_chem,
                     param_apoptosis_start_time,
                     param_apoptosis_start_rate,
                     param_apoptosis_decay_rate,
                 ),
             )
-            
-            progressBar(last_time - first_time,final_sim_time-first_time, suffix="({:.2f}/{:.2f})".format(last_time, final_sim_time))
+
+            progressBar(last_time - first_time, final_sim_time-first_time,
+                        suffix="({:.2f}/{:.2f})".format(last_time, final_sim_time))
 
             last_time = next_end_time
 
@@ -908,7 +904,8 @@ if __name__ == "__main__":
                     rho_s = res_data[step][per_system_dim:2*per_system_dim]
                     rho_chem = res_data[step][2*per_system_dim:]
 
-                    write_entry(trajectory_out, t_data[step], rho_g, rho_s, rho_chem)
+                    write_entry(trajectory_out,
+                                t_data[step], rho_g, rho_s, rho_chem)
                     rho = rho_g + rho_s
 
                     filter_mask = rho > 1e-3
@@ -950,9 +947,10 @@ if __name__ == "__main__":
 
                 report_axs[1].clear()
                 report_axs[1].set_title("Chemical distribution")
-                report_axs[1].plot(r_vals, rho_chem, label=r"$\rho_{chem}$", c="k")
-                #report_axs[1].set_ylim((1e-4, 1.1))
-                #report_axs[1].set_xlim((1e-4, ratio_density_max))
+                report_axs[1].plot(
+                    r_vals, rho_chem, label=r"$\rho_{chem}$", c="k")
+                # report_axs[1].set_ylim((1e-4, 1.1))
+                # report_axs[1].set_xlim((1e-4, ratio_density_max))
 
                 report_fig.tight_layout()
                 report_fig.savefig(
@@ -964,7 +962,7 @@ if __name__ == "__main__":
 
     print("Writing final state")
     write_tissue_state_chemical(output_prefix+"final_state.txt",
-                       r_vals, total_rho_history, total_t_history)
+                                r_vals, total_rho_history, total_t_history)
     print("Done")
 
     sys.exit(0)
