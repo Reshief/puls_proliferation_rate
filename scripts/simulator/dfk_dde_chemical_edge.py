@@ -92,6 +92,8 @@ def dfk_dde_model(
     c,
     r_vals,
     chem_rate,
+    chem_decay_rate,
+    nabla_rho_t,
     D_chem,
     apoptosis_start_time=-1,
     apoptosis_start_rate=1.0,
@@ -171,7 +173,7 @@ def dfk_dde_model(
     nabla_full_cell = get_nabla_reflecting(r_vals, rho_cell_total)
 
     # TODO: Make minimum gradient configurable
-    spawn_filter = np.abs(nabla_full_cell) > 0.1
+    spawn_filter = np.abs(nabla_full_cell) > nabla_rho_t
 
     # Determine the full gradient as a sort of measure for the pressure gradient
 
@@ -193,7 +195,7 @@ def dfk_dde_model(
     # Only spawn chemical where filter has determined
     diff_t_chem[spawn_filter] += chem_rate * rho_cell_total[spawn_filter]
     # Make chemical disappear over time
-    diff_t_chem -= 1.0 * rho_chem
+    diff_t_chem -= chem_decay_rate * rho_chem
 
     # Apply apoptosis if configured
     if apoptosis_start_time >= 0 and t > apoptosis_start_time:
@@ -231,6 +233,8 @@ def dfk_dde_model_1D(
     c,
     r_vals,
     chem_rate,
+    chem_decay_rate,
+    nabla_rho_t,
     D_chem,
     apoptosis_start_time=-1,
     apoptosis_start_rate=1.0,
@@ -306,7 +310,7 @@ def dfk_dde_model_1D(
     )
 
     # chalculate chemical diffusion at all but origin
-    rho_cell_total = rho_g + rho_s
+    """rho_cell_total = rho_g + rho_s
     diff_t_chem[1:] = (
         (D_chem) * (laplace_chem[1:])
         # Cells secreting the chemical
@@ -321,7 +325,34 @@ def dfk_dde_model_1D(
         (D_chem) * (2. * (rho_chem[1]-rho_chem[0])/dr2)
         # Cells secreting the chemical
         + chem_rate * rho_cell_total[0]
+    )"""
+
+    # chalculate chemical diffusion at all but origin
+    rho_cell_total = rho_g + rho_s
+    nabla_full_cell = get_nabla_reflecting(r_vals, rho_cell_total)
+
+    # TODO: Make minimum gradient configurable
+    spawn_filter = np.abs(nabla_full_cell) > nabla_rho_t
+
+    # TODO: Add constant dissipation rate for chemical
+    diff_t_chem[1:] = (
+        (D_chem) * (laplace_chem[1:])
+        # Cells secreting the chemical
     )
+
+    # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
+    # FIXME: maybe there is a term that needs to be plugged instead of 0.0 (gradient/r \to ? for r\to 0)
+    diff_t_chem[0] = (
+        # (D_chem) * (laplace_chem[0] + 0.0)
+        # FIXED: The laplace-term at r=0 has been fixed
+        (D_chem) * (2. * (rho_chem[1]-rho_chem[0])/dr2)
+        # Cells secreting the chemical
+    )
+
+    # Only spawn chemical where filter has determined
+    diff_t_chem[spawn_filter] += chem_rate * rho_cell_total[spawn_filter]
+    # Make chemical disappear over time
+    diff_t_chem -= chem_decay_rate * rho_chem
 
     # Apply apoptosis if configured
     if apoptosis_start_time >= 0 and t > apoptosis_start_time:
@@ -391,6 +422,22 @@ if __name__ == "__main__":
         default=1,
         type=float,
         help="The rate at which cells secrete the chemical.",
+    )
+
+    parser.add_argument(
+        "-a_chem",
+        "--chemical_decay_rate",
+        default=1,
+        type=float,
+        help="The rate at which the chemical evaporates/decays.",
+    )
+
+    parser.add_argument(
+        "-nabla_t",
+        "--nabla_rho_threshold_chemical",
+        default=1,
+        type=float,
+        help="The minimum absolute derivative of density for cells to produce the chemical.",
     )
 
     parser.add_argument(
@@ -625,6 +672,8 @@ if __name__ == "__main__":
     # Chemical parameters
     chem_rate = args.chemical_creation_rate
     D_chem = args.diff_constant_chemical
+    chem_decay_rate = args.chemical_decay_rate
+    nabla_rho_t = args.nabla_rho_threshold_chemical
 
     # Enforce that there are enough positions for the initialization:
     R = max(R_i + 2 * dr, R)
@@ -749,6 +798,14 @@ if __name__ == "__main__":
         config_out.write(
             "{0}\t=\t{1:.5e}\n".format("b[chemical] (b_chem)", chem_rate)
         )
+        config_out.write(
+            "{0}\t=\t{1:.5e}\n".format("a[chemical] (a_chem)", chem_decay_rate)
+        )
+        config_out.write(
+            "{0}\t=\t{1:.5e}\n".format(
+                "nabla_rho_thresh[chemical] (nabla_rho_t)", nabla_rho_t)
+        )
+
         config_out.write(
             "{0}\t=\t{1:.5e}\n".format("D[chemical] (D_chem)", D_chem)
         )
@@ -877,6 +934,8 @@ if __name__ == "__main__":
                     c,
                     r_vals,
                     chem_rate,
+                    chem_decay_rate,
+                    nabla_rho_t,
                     D_chem,
                     param_apoptosis_start_time,
                     param_apoptosis_start_rate,
