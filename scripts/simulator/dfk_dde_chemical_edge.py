@@ -379,6 +379,164 @@ def dfk_dde_model_1D(
     )
 
 
+def dfk_dde_model_1D_edgemult(
+    Y,
+    t,
+    Delta_t_s,
+    D_base,
+    D_slope,
+    b,
+    rho_0,
+    c,
+    r_vals,
+    chem_rate,
+    chem_decay_rate,
+    nabla_rho_t,
+    D_chem,
+    apoptosis_start_time=-1,
+    apoptosis_start_rate=1.0,
+    apoptosis_decay_rate=0.0,
+):
+    per_system_dim = len(r_vals)
+    # Get current state
+    current = Y(t)
+    rho_g = current[:per_system_dim]
+    rho_s = current[per_system_dim:2*per_system_dim]
+    rho_chem = current[2*per_system_dim:]
+    # Get delayed state
+    delayed = Y(t - Delta_t_s)
+    rho_g_d = delayed[:per_system_dim]
+    rho_s_d = delayed[per_system_dim:2*per_system_dim]
+
+    # Get gradient and laplace for differential calculation
+    gradient_g = get_nabla_reflecting(r_vals, rho_g)
+    laplace_g = get_laplace(r_vals, rho_g)
+
+    nabla_chemical = get_nabla_reflecting(r_vals, rho_chem)
+    laplace_chem = get_laplace(r_vals, rho_chem)
+
+    def enter_s(p_b, p_rho_0, p_c, p_rho_g, p_rho_s):
+        rho_total = p_rho_g + p_rho_s
+        return (
+            p_b
+            * np.power(np.clip(1.0 - rho_total / p_rho_0, a_min=0.0, a_max=1.0), p_c)
+            * p_rho_g
+        )
+
+    enter_division = enter_s(b, rho_0, c, rho_g, rho_s)
+
+    # Before time t=0 there was no proliferation onset according to our model
+    if t - Delta_t_s >= 0:
+        enter_division_d = enter_s(b, rho_0, c, rho_g_d, rho_s_d)
+    else:
+        enter_division_d = rho_s * 0.0
+
+    diff_t_g = np.zeros_like(rho_g)
+    diff_t_s = np.zeros_like(rho_s)
+    diff_t_chem = np.zeros_like(rho_chem)
+
+    # calculate d_t for all but the r=0 position
+
+    # Calculate spatially dependent diffusion
+    D = D_slope * rho_chem + D_base
+    gradient_D = get_nabla_reflecting(r_vals, D)
+
+    diff_t_g[1:] = (
+        (D[1:]) * (laplace_g[1:])
+        # Deal with D being non-constant
+        + (gradient_D[1:]) * (gradient_g[1:])
+        # The g-state cells entering the s-phase
+        - enter_division[1:]
+        # The previous s-phase cells now proliferating
+        + 2 * enter_division_d[1:]
+    )
+
+    dr = r_vals[1] - r_vals[0]
+    dr2 = dr**2
+    # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
+    diff_t_g[0] = (
+        # (D[0]) * (laplace_g[0] + 0.0)
+        # FIXED: The laplace-term at r=0 has been fixed
+        (D[0]) * (2. * (rho_g[1]-rho_g[0])/dr2)
+        # Deal with D being non-constant
+        + (gradient_D[0]) * (gradient_g[0])
+        # The g-state cells entering the s-phase
+        - enter_division[0]
+        # The previous s-phase cells now proliferating
+        + 2 * enter_division_d[0]
+    )
+
+    # chalculate chemical diffusion at all but origin
+    """rho_cell_total = rho_g + rho_s
+    diff_t_chem[1:] = (
+        (D_chem) * (laplace_chem[1:])
+        # Cells secreting the chemical
+        + chem_rate * rho_cell_total[1:]
+    )
+
+    # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
+    # FIXME: maybe there is a term that needs to be plugged instead of 0.0 (gradient/r \to ? for r\to 0)
+    diff_t_chem[0] = (
+        # (D_chem) * (laplace_chem[0] + 0.0)
+        # FIXED: The laplace-term at r=0 has been fixed
+        (D_chem) * (2. * (rho_chem[1]-rho_chem[0])/dr2)
+        # Cells secreting the chemical
+        + chem_rate * rho_cell_total[0]
+    )"""
+
+    # chalculate chemical diffusion at all but origin
+    rho_cell_total = rho_g + rho_s
+    nabla_full_cell = get_nabla_reflecting(r_vals, rho_cell_total)
+
+    # TODO: Make minimum gradient configurable
+    spawn_filter = np.abs(nabla_full_cell) > nabla_rho_t
+    spawn_multiplier = rho_cell_total * np.abs(nabla_full_cell)
+
+    # TODO: Add constant dissipation rate for chemical
+    diff_t_chem[1:] = (
+        (D_chem) * (laplace_chem[1:])
+        # Cells secreting the chemical
+    )
+
+    # Deal with the pole at r=0 which cancels with the reflecting boundary condition gradient=0
+    # FIXME: maybe there is a term that needs to be plugged instead of 0.0 (gradient/r \to ? for r\to 0)
+    diff_t_chem[0] = (
+        # (D_chem) * (laplace_chem[0] + 0.0)
+        # FIXED: The laplace-term at r=0 has been fixed
+        (D_chem) * (2. * (rho_chem[1]-rho_chem[0])/dr2)
+        # Cells secreting the chemical
+    )
+
+    # Only spawn chemical where filter has determined
+    diff_t_chem[spawn_filter] += chem_rate * spawn_multiplier[spawn_filter]
+    # Make chemical disappear over time
+    diff_t_chem -= chem_decay_rate * rho_chem
+
+    # Apply apoptosis if configured
+    if apoptosis_start_time >= 0 and t > apoptosis_start_time:
+        # Apoptosis rate decays over time
+        curr_apoptosis_rate = apoptosis_start_rate * np.exp(
+            -(t - apoptosis_start_time) * apoptosis_decay_rate
+        )
+        # Add apoptosis on top of other influences
+        diff_t_g -= rho_g * curr_apoptosis_rate
+
+    diff_t_s = enter_division - enter_division_d
+
+    # No change at last position
+    diff_t_g[-1] = 0.0
+    diff_t_s[-1] = 0.0
+    diff_t_chem[-1] = 0.0
+
+    return np.concatenate(
+        (
+            diff_t_g,
+            diff_t_s,
+            diff_t_chem
+        )
+    )
+
+
 # Generate initial history conditions from a list of times and associated density data
 def get_history_init_condition(t_values, rho_data):
     def history_init(t):
@@ -922,7 +1080,8 @@ if __name__ == "__main__":
 
             # Do the simulation
             res_data = solve_dde(
-                dfk_dde_model_1D,
+                # dfk_dde_model_1D,
+                dfk_dde_model_1D_edgemult,
                 init_condition,
                 t_data,
                 fargs=(
