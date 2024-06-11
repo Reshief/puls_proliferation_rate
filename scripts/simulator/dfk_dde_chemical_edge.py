@@ -193,7 +193,7 @@ def dfk_dde_model(
     # Only spawn chemical where filter has determined
     diff_t_chem[spawn_filter] += chem_rate * rho_cell_total[spawn_filter]
     # Make chemical disappear over time
-    diff_t_chem -= 0.1 * rho_chem
+    diff_t_chem -= 1.0 * rho_chem
 
     # Apply apoptosis if configured
     if apoptosis_start_time >= 0 and t > apoptosis_start_time:
