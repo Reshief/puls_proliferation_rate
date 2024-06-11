@@ -435,7 +435,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-nabla_t",
         "--nabla_rho_threshold_chemical",
-        default=1,
+        default=0.1,
         type=float,
         help="The minimum absolute derivative of density for cells to produce the chemical.",
     )
