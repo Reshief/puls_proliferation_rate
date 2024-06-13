@@ -379,7 +379,7 @@ def dfk_dde_model_1D(
     )
 
 
-def dfk_dde_model_1D_edgemult(
+def dfk_dde_model_1D_edgemult_constraint(
     Y,
     t,
     Delta_t_s,
@@ -387,6 +387,7 @@ def dfk_dde_model_1D_edgemult(
     D_slope,
     b,
     rho_0,
+    rho_edge_derivative_threshold,
     c,
     r_vals,
     chem_rate,
@@ -415,6 +416,35 @@ def dfk_dde_model_1D_edgemult(
     nabla_chemical = get_nabla_reflecting(r_vals, rho_chem)
     laplace_chem = get_laplace(r_vals, rho_chem)
 
+    # Determine the moving edge
+    rho_total = rho_g + rho_s
+
+    rho_non_zero = rho_total > 1e-6
+    r_max_non_zero = np.max(r_vals[rho_non_zero])
+    r_max_non_zero_index = np.argmax(r_vals <= r_max_non_zero)
+
+    dr = r_vals[1] - r_vals[0]
+    r_max_gradient = rho_total[r_max_non_zero_index]/dr
+
+    # Set limit index for diffusion spread and move by one if threshold exceeded
+    limit_index_constraint = r_max_non_zero_index
+    if r_max_gradient > rho_edge_derivative_threshold:
+        limit_index_constraint += 1
+
+    # Determine delayed edge constraint
+    rho_total_d = rho_g_d + rho_s_d
+
+    rho_non_zero = rho_total_d > 1e-6
+    r_max_non_zero = np.max(r_vals[rho_non_zero])
+    r_max_non_zero_index = np.argmax(r_vals <= r_max_non_zero)
+
+    r_max_gradient_d = rho_total_d[r_max_non_zero_index]/dr
+
+    # Set limit index for diffusion spread and move by one if threshold exceeded
+    limit_index_constraint_d = r_max_non_zero_index
+    if r_max_gradient_d > rho_edge_derivative_threshold:
+        limit_index_constraint_d += 1
+
     def enter_s(p_b, p_rho_0, p_c, p_rho_g, p_rho_s):
         rho_total = p_rho_g + p_rho_s
         return (
@@ -430,6 +460,8 @@ def dfk_dde_model_1D_edgemult(
         enter_division_d = enter_s(b, rho_0, c, rho_g_d, rho_s_d)
     else:
         enter_division_d = rho_s * 0.0
+
+    enter_division_d[limit_index_constraint_d+1:0] = 0.0
 
     diff_t_g = np.zeros_like(rho_g)
     diff_t_s = np.zeros_like(rho_s)
@@ -465,6 +497,12 @@ def dfk_dde_model_1D_edgemult(
         # The previous s-phase cells now proliferating
         + 2 * enter_division_d[0]
     )
+
+    # Limit cell growth in territory beyond constraints
+    excess_diff_t_g = np.sum(diff_t_g[limit_index_constraint:])
+
+    diff_t_g[limit_index_constraint:0] = 0.
+    diff_t_g[limit_index_constraint] = excess_diff_t_g
 
     # chalculate chemical diffusion at all but origin
     """rho_cell_total = rho_g + rho_s
@@ -522,6 +560,12 @@ def dfk_dde_model_1D_edgemult(
         diff_t_g -= rho_g * curr_apoptosis_rate
 
     diff_t_s = enter_division - enter_division_d
+
+    # Limit cell growth in territory beyond constraints
+    excess_diff_t_s = np.sum(diff_t_s[limit_index_constraint:])
+
+    diff_t_s[limit_index_constraint:0] = 0.
+    diff_t_s[limit_index_constraint] = excess_diff_t_s
 
     # No change at last position
     diff_t_g[-1] = 0.0
@@ -596,6 +640,14 @@ if __name__ == "__main__":
         default=0.1,
         type=float,
         help="The minimum absolute derivative of density for cells to produce the chemical.",
+    )
+
+    parser.add_argument(
+        "-drho_e",
+        "--rho_edge_derivative_threshold",
+        default=-1,
+        type=float,
+        help="The minimum absolute derivative that needs to build up at the edge for the edge to move outwards.",
     )
 
     parser.add_argument(
@@ -832,6 +884,9 @@ if __name__ == "__main__":
     D_chem = args.diff_constant_chemical
     chem_decay_rate = args.chemical_decay_rate
     nabla_rho_t = args.nabla_rho_threshold_chemical
+
+    # Edge constraints
+    rho_edge_derivative_threshold = args.rho_edge_derivative_threshold
 
     # Enforce that there are enough positions for the initialization:
     R = max(R_i + 2 * dr, R)
@@ -1081,7 +1136,8 @@ if __name__ == "__main__":
             # Do the simulation
             res_data = solve_dde(
                 # dfk_dde_model_1D,
-                dfk_dde_model_1D_edgemult,
+                # dfk_dde_model_1D_edgemult,
+                dfk_dde_model_1D_edgemult_constraint,
                 init_condition,
                 t_data,
                 fargs=(
@@ -1090,6 +1146,7 @@ if __name__ == "__main__":
                     D_slope,
                     b,
                     rho_0,
+                    rho_edge_derivative_threshold,
                     c,
                     r_vals,
                     chem_rate,
