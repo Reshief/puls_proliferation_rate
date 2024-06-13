@@ -1117,6 +1117,13 @@ if __name__ == "__main__":
         write_entry(trajectory_out, -1, r_vals, r_vals, r_vals)
         trajectory_out.flush()
 
+        # Write initial state
+        init_state = init_condition(last_time)
+        rho_g = init_state[:per_system_dim]
+        rho_s = init_state[per_system_dim:2*per_system_dim]
+        rho_chem = init_state[2*per_system_dim:]
+        write_entry(trajectory_out, 0.0, rho_g, rho_s, rho_chem)
+
         first_time = last_time
         progressBar(0., final_sim_time-first_time)
 
