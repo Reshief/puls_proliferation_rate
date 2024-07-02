@@ -421,15 +421,20 @@ def dfk_dde_model_1D_edgemult_constraint(
 
     rho_non_zero = rho_total > 1e-6
     r_max_non_zero = np.max(r_vals[rho_non_zero])
-    r_max_non_zero_index = np.argmax(r_vals <= r_max_non_zero)
+    #print("r_max_non_zero",r_max_non_zero)
+    r_max_non_zero_index = np.argmax(r_vals[r_vals <= r_max_non_zero])
+    #print("r_max_non_zero_index",r_max_non_zero_index)
 
     dr = r_vals[1] - r_vals[0]
     r_max_gradient = rho_total[r_max_non_zero_index]/dr
 
     # Set limit index for diffusion spread and move by one if threshold exceeded
     limit_index_constraint = r_max_non_zero_index
+    #print(r_max_gradient, ">", rho_edge_derivative_threshold)
+    #print("pre", limit_index_constraint)
     if r_max_gradient > rho_edge_derivative_threshold:
         limit_index_constraint += 1
+    #print("post", limit_index_constraint)
 
     # Determine delayed edge constraint
     rho_total_d = rho_g_d + rho_s_d
@@ -461,7 +466,7 @@ def dfk_dde_model_1D_edgemult_constraint(
     else:
         enter_division_d = rho_s * 0.0
 
-    enter_division_d[limit_index_constraint_d+1:0] = 0.0
+    enter_division_d[limit_index_constraint_d+1:] = 0.0
 
     diff_t_g = np.zeros_like(rho_g)
     diff_t_s = np.zeros_like(rho_s)
@@ -501,7 +506,7 @@ def dfk_dde_model_1D_edgemult_constraint(
     # Limit cell growth in territory beyond constraints
     excess_diff_t_g = np.sum(diff_t_g[limit_index_constraint:])
 
-    diff_t_g[limit_index_constraint:0] = 0.
+    diff_t_g[limit_index_constraint:] = 0.
     diff_t_g[limit_index_constraint] = excess_diff_t_g
 
     # chalculate chemical diffusion at all but origin
@@ -564,13 +569,18 @@ def dfk_dde_model_1D_edgemult_constraint(
     # Limit cell growth in territory beyond constraints
     excess_diff_t_s = np.sum(diff_t_s[limit_index_constraint:])
 
-    diff_t_s[limit_index_constraint:0] = 0.
+    diff_t_s[limit_index_constraint:] = 0.
     diff_t_s[limit_index_constraint] = excess_diff_t_s
 
     # No change at last position
     diff_t_g[-1] = 0.0
     diff_t_s[-1] = 0.0
     diff_t_chem[-1] = 0.0
+
+    #print("diff g at cutoff", diff_t_g[limit_index_constraint-1],
+    #      diff_t_g[limit_index_constraint], diff_t_g[limit_index_constraint+1])
+    #print("diff s at cutoff", diff_t_s[limit_index_constraint-1],
+    #      diff_t_s[limit_index_constraint], diff_t_s[limit_index_constraint+1])
 
     return np.concatenate(
         (
