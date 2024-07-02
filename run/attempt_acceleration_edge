@@ -25,5 +25,21 @@ python ./scripts/simulator/dfk_dde_chemical_edge_constrained.py -c 1.0 -b 0.5 -b
 python3 ./scripts/analysis/plot_chemical_density.py -t 9.5 -rs 0.01 -r 20 -i ./output/test_edge_constraint/ -o ./output/test_edge_constraint/
 
 # After bug fix, this should work:
-python ./scripts/simulator/dfk_dde_chemical_edge_constrained.py -c 1.0 -b 0.5 -b_chem 6e-4 -a_chem 1 -nabla_t 0.02 -D_0 1.0 -D_c 2.5 -ts 0.0 -r 200 -D_chem 2.3 -r_i 5 -d_i 1. -d_c 1. -drho_e 100 -dr 0.2 -t 10.2 -dt 0.001 -o ./output/test_edge_constraint/ -g -rs 0.1
+python ./scripts/simulator/dfk_dde_chemical_edge_constrained.py -c 1.0 -b 0.5 -b_chem 6e-4 -a_chem 1 -nabla_t 0.02 -D_0 1.0 -D_c 2.5 -ts 0.0 -r 200 -D_chem 2.3 -r_i 5 -d_i 1. -d_c 1. -drho_e 1 -dr 0.2 -t 10.2 -dt 0.001 -o ./output/test_edge_constraint/ -g -rs 0.1
 python ./scripts/analysis/plot_chemical_density.py -t 9.5 -rs 0.01 -r 20 -i ./output/test_edge_constraint/ -o ./output/test_edge_constraint/
+python ./scripts/analysis/extract_radius_evolution.py -e 10.5 -i ./output/test_edge_constraint/full_trajectory.txt -o ./output/test_edge_constraint/
+
+# Reduce limit slope at edge to 0.5
+python ./scripts/simulator/dfk_dde_chemical_edge_constrained.py -c 1.0 -b 0.5 -b_chem 6e-4 -a_chem 1 -nabla_t 0.02 -D_0 1.0 -D_c 2.5 -ts 0.0 -r 200 -D_chem 2.3 -r_i 5 -d_i 1. -d_c 1. -drho_e 0.5 -dr 0.2 -t 10.2 -dt 0.001 -o ./output/test_edge_constraint_flatter/ -g -rs 0.1
+python ./scripts/analysis/plot_chemical_density.py -t 9.5 -rs 0.01 -r 20 -i ./output/test_edge_constraint_flatter/ -o ./output/test_edge_constraint_flatter/
+python ./scripts/analysis/extract_radius_evolution.py -e 10.5 -i ./output/test_edge_constraint_flatter/full_trajectory.txt -o ./output/test_edge_constraint_flatter/
+
+# Reduce even further to 0.25
+python ./scripts/simulator/dfk_dde_chemical_edge_constrained.py -c 1.0 -b 0.5 -b_chem 6e-4 -a_chem 1 -nabla_t 0.02 -D_0 1.0 -D_c 2.5 -ts 0.0 -r 200 -D_chem 2.3 -r_i 5 -d_i 1. -d_c 1. -drho_e 0.25 -dr 0.2 -t 10.2 -dt 0.001 -o ./output/test_edge_constraint_slope_0.25/ -g -rs 0.1
+python ./scripts/analysis/plot_chemical_density.py -t 9.5 -rs 0.01 -r 20 -i ./output/test_edge_constraint_slope_0.25/ -o ./output/test_edge_constraint_slope_0.25/
+python ./scripts/analysis/extract_radius_evolution.py -e 10.5 -i ./output/test_edge_constraint_slope_0.25/full_trajectory.txt -o ./output/test_edge_constraint_slope_0.25/
+
+# Reduce to 0.1
+python ./scripts/simulator/dfk_dde_chemical_edge_constrained.py -c 1.0 -b 0.5 -b_chem 6e-4 -a_chem 1 -nabla_t 0.02 -D_0 1.0 -D_c 2.5 -ts 0.0 -r 200 -D_chem 2.3 -r_i 5 -d_i 1. -d_c 1. -drho_e 0.25 -dr 0.2 -t 100 -dt 0.001 -o ./output/test_edge_constraint_slope_0.1/ -g -rs 1
+python ./scripts/analysis/plot_chemical_density.py -t 100 -rs 1 -r 50 -i ./output/test_edge_constraint_slope_0.1/ -o ./output/test_edge_constraint_slope_0.1/
+python ./scripts/analysis/extract_radius_evolution.py -e 10.5 -i ./output/test_edge_constraint_slope_0.1/full_trajectory.txt -o ./output/test_edge_constraint_slope_0.1/
