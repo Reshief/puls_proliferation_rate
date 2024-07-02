@@ -433,6 +433,7 @@ def dfk_dde_model_1D_edgemult_constraint(
     #print(r_max_gradient, ">", rho_edge_derivative_threshold)
     #print("pre", limit_index_constraint)
     if r_max_gradient > rho_edge_derivative_threshold:
+        #print("Moved edge")
         limit_index_constraint += 1
     #print("post", limit_index_constraint)
 
@@ -441,7 +442,7 @@ def dfk_dde_model_1D_edgemult_constraint(
 
     rho_non_zero = rho_total_d > 1e-6
     r_max_non_zero = np.max(r_vals[rho_non_zero])
-    r_max_non_zero_index = np.argmax(r_vals <= r_max_non_zero)
+    r_max_non_zero_index = np.argmax(r_vals[r_vals <= r_max_non_zero])
 
     r_max_gradient_d = rho_total_d[r_max_non_zero_index]/dr
 
