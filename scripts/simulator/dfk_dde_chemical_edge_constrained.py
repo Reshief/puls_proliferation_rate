@@ -9,7 +9,7 @@ import sys
 from os.path import dirname, abspath
 import scipy.integrate as sp_int
 import scipy.interpolate as sp_interpol
-from ddesolver import solve_dde
+from ddesolver import solve_dde, ddeVar
 from tissue_state import read_tissue_state_chemical, write_tissue_state_chemical
 
 
@@ -1150,8 +1150,25 @@ if __name__ == "__main__":
                     int(np.ceil(sim_delta / dt)), 2)
             )
 
+            def solve_dde_constrained(func, generator, tt, fargs=None):
+                Y = ddeVar(generator, tt[0])
+
+                num_steps = len(tt)-1
+
+                curr = Y(tt[0])
+                total_res = [curr]
+                for i_step in range(num_steps):
+                    dt = tt[i_step+1]-tt[i_step]
+                    deriv = func(Y, tt[i_step+1], *fargs)
+                    new_pos = curr + dt * deriv
+                    Y.update(tt[i_step+1], new_pos)
+                    total_res.append(new_pos)
+                    curr = new_pos
+
+                return np.array(total_res)
+
             # Do the simulation
-            res_data = solve_dde(
+            res_data = solve_dde_constrained(  # solve_dde(
                 # dfk_dde_model_1D,
                 # dfk_dde_model_1D_edgemult,
                 dfk_dde_model_1D_edgemult_constraint,
